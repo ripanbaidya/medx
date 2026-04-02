@@ -1,0 +1,140 @@
+services:
+
+  # ======================================================
+  # RabbitMQ - Spring Cloud Bus config refresh transport
+  # ======================================================
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: medx-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP port (used by Spring)
+      - "15672:15672"  # Management UI → http://localhost:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medx-network
+
+  # ======================================================
+  # Keycloak PostgreSql - stores realm, users, roles
+  # ======================================================
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U keycloak" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medx-network
+
+  # ======================================================
+  # Keycloak — Identity Provider
+  # ======================================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.8
+    container_name: medx-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+    ports:
+      - "8081:8080"
+    volumes:
+      - ../../../keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080/realms/medx || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - medx-network
+
+  # ======================================================
+  # Redis - single instance, logical db per service
+  # DB 0 - appointment-service (slot locking)
+  # DB 1 - payment-service (idempotency keys)
+  # DB 2 - api-gateway (rate limiter)
+  # DB 3 - user-service (OTP) and so on..
+  # ======================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: medx-redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --loglevel notice
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medx-network
+
+  # ======================================================
+  # Databases wrt each Microservices
+  # ======================================================
+
+  # user-service
+  user-db:
+    image: postgres:16-alpine
+    container_name: user-db
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medx-network
+
+volumes:
+  rabbitmq-data:
+  keycloak-db-data:
+  redis-data:
+  user-db-data:
+
+networks:
+  medx-network:
+    driver: bridge

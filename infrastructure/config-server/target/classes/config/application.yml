@@ -25,6 +25,7 @@ eureka:
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
 
+# Spring Cloud Bus with RabbitMQ transport
 spring:
   cloud:
     bus:
@@ -35,11 +36,12 @@ spring:
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
 
+# Actuator + Zipkin + Prometheus
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, refresh, busrefresh, metrics
+        include: health, info, refresh, busrefresh, metrics, prometheus
       base-path: /actuator
   endpoint:
     health:
@@ -54,8 +56,14 @@ management:
   info:
     env:
       enabled: true
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:1.0}
 
 info:
   app:
     name: ${spring.application.name}
-    version: "@project.version@"
+    version: "1.0.0"

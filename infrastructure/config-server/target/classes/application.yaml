@@ -1,0 +1,68 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    # native: classpath/file config, git: remote Git repo config
+    # Development: classpath approach, Production: git-based configuration
+    active: native
+
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/config/, classpath:/config/{application}
+
+    # Note: Uncomment the below section to enable Git-based config, make sure formatting is correct
+    #        git:
+    #          uri: ${CONFIG_GIT_URI:https://github.com/ripanbaidya/repo-name}
+    #          search-paths: '{application}'
+    #          default-label: main
+    #          timeout: 5
+    #          username: ${CONFIG_GIT_USERNAME}
+    #          password: ${CONFIG_GIT_PASSWORD}
+
+    # Spring Cloud Bus — broadcasts /actuator/busrefresh to all services via RabbitMQ
+    # Usage: When microservice instances are running and a config property is changed at runtime,
+    # hitting the /actuator/busrefresh endpoint on any instance propagates the config change to all
+    # other instances of that microservice.
+    bus:
+      enabled: true
+
+  # RabbitMQ - transport for Spring Cloud Bus config refresh events
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, busrefresh, refresh, env, metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  info:
+    env:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: "Spring Cloud Config Server for centralized configuration management in microservices architecture"
+    version: "1.0.0"

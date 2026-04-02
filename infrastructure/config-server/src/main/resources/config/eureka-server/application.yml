@@ -1,0 +1,54 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+  cloud:
+    bus:
+      # Spring Cloud Bus uses RabbitMQ to broadcast config refresh events
+      # across all microservices when /actuator/busrefresh is triggered.
+      # Eureka server does NOT participate in config refresh — it has no
+      # @RefreshScope beans and does not need runtime config reloading.
+      # Disabling this prevents unnecessary RabbitMQ connection attempts.
+      enabled: false
+
+    autoconfigure:
+      exclude:
+        # Since Spring Cloud Bus is disabled, we also exclude RabbitMQ autoconfiguration
+        # entirely. Without this exclusion, Spring Boot will still try to autoconfigure a
+        # RabbitMQ connection on startup (because the dependency is present in shared
+        # config / classpath), causing connection errors if RabbitMQ is not yet up.
+        - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    fetch-registry: false
+    register-with-eureka: false
+    registry-fetch-interval-seconds: 30
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+  server:
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:true}
+    eviction-interval-timer-in-ms: 5000
+    renewal-percent-threshold: 0.85
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Since we are not using busrefresh with rabbitmq for eureka, we don't need to
+        # expose the refresh and busrefresh endpoint
+        include: health, info, metrics
+
+logging:
+  level:
+    com.netflix.eureka: DEBUG
+    com.netflix.discovery: DEBUG
+
+info:
+  app:
+    description: "Eureka Server - Centralized service discovery and registration hub providing dynamic service location, health monitoring, and load balancing support for distributed microservices"

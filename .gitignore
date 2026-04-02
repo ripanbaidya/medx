@@ -202,3 +202,5 @@ infra/**/*.tfvars
 .cache/
 tmp/
 temp/
+CLAUDE.md
+WORKFLOW.md

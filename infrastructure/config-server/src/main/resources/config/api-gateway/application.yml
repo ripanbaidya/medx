@@ -1,0 +1,146 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: "api-gateway"
+
+  main:
+    # force webflux mode even with web server on classpath
+    web-application-type: reactive
+
+  # Required to implement Spring Cloud Gateway's Redis-based rate limiter
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 2 # connect to redis database 2 for API Gateway rate limiting
+      connect-timeout: 2000
+      timeout: 1000
+
+  # OAuth2 Resource Server — JWT validation via Keycloak JWKS
+  # Spring Security will auto-fetch public keys from this URI and validate every
+  # incoming JWT signature + expiry + issuer. No manual validation code needed.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/medx}
+          jwks-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8081/realms/medx/protocol/openid-connect/certs}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${server.port}
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+
+# gateway: /actuator/gateway = provides visibility and control over all routes and filters
+# inside Spring Cloud Gateway
+management:
+  endpoint:
+    gateway:
+      enabled: true
+
+# Resilience4j Circuit Breaker config
+# One circuit breaker per downstream service — independent thresholds.
+# Names must match CB_ constants in GatewayConstant.java
+resilience4j:
+  circuitbreaker:
+    instances:
+      userServiceCB:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 10
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+
+      doctorServiceCB:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 10
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+
+      appointmentServiceCB:
+        failure-rate-threshold: 40
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 2
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+        slow-call-rate-threshold: 40
+        slow-call-duration-threshold: 3s
+
+      paymentServiceCB:
+        failure-rate-threshold: 30
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 20s
+        permitted-number-of-calls-in-half-open-state: 2
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+        slow-call-rate-threshold: 30
+        slow-call-duration-threshold: 3s
+
+      notificationServiceCB:
+        failure-rate-threshold: 60
+        minimum-number-of-calls: 10
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+        slow-call-rate-threshold: 60
+        slow-call-duration-threshold: 2s
+
+      feedbackServiceCB:
+        failure-rate-threshold: 60
+        minimum-number-of-calls: 10
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+
+      adminServiceCB:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 10
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+
+  retry:
+    instances:
+      userServiceCB:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - org.springframework.web.server.ResponseStatusException
+      appointmentServiceCB:
+        max-attempts: 2
+        wait-duration: 1000ms
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+      paymentServiceCB:
+        max-attempts: 1
+        wait-duration: 0ms
+
+logging:
+  level:
+    com.medx.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+
+info:
+  app:
+    name: "API Gateway"
+    description: "Centralized API Gateway providing secure routing, load balancing, and circuit breaker protection for Microservices"

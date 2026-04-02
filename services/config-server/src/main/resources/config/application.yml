@@ -1,2 +1,0 @@
-# This is global config for all microservices and all microservices will inherit it automatically.
-# Service specific files override only what they need.

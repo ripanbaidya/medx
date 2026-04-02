@@ -1,0 +1,54 @@
+{
+  "realm": "medx",
+  "displayName": "MedX",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "accessTokenLifespan": 900,
+  "ssoSessionMaxLifespan": 604800,
+  "clients": [
+    {
+      "clientId": "medx-client",
+      "name": "MedX Client",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "medx-client-secret",
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "900"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "PATIENT",
+        "description": "Patient role"
+      },
+      {
+        "name": "DOCTOR",
+        "description": "Doctor role"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Platform Administrator"
+      }
+    ]
+  },
+  "defaultRoles": [
+    "PATIENT"
+  ]
+}

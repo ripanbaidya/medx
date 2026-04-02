@@ -1,6 +1,0 @@
-spring:
-  application:
-    name: api-gateway
-
-  config:
-    import: http://localhost:8888

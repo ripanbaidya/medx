@@ -1,9 +1,0 @@
-eureka:
-  instance:
-    hostname: localhost
-
-logging:
-  level:
-    com.netflix.eureka: debug
-    com.netflix.discovery: debug
-    com.iconic.eurekaserver: debug
